@@ -657,7 +657,7 @@ void run(const str &expr)
     }
     catch (const std::runtime_error &e)
     {
-        std::print(stderr, "{}", e.what());
+        std::println(stderr, "{}", e.what());
         return;
     }
 }

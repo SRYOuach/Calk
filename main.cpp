@@ -1,6 +1,24 @@
 #include "calk.hpp"
 #include <charconv>
-#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <print>
+#include <readline/history.h>
+#include <readline/readline.h>
+
+struct AltScreen
+{
+    AltScreen()
+    {
+        std::print("\033[?1049h");
+        std::print("\033[2J\033[H");
+    }
+    ~AltScreen()
+    {
+        std::print("\033[?1049l");
+    }
+};
+
 using namespace calk;
 
 int main(int argc, char *argv[])
@@ -12,14 +30,20 @@ int main(int argc, char *argv[])
     }
     else
     {
+        AltScreen alt;
         while (true)
         {
-            str input;
-            std::cout << "> ";
-            if (!std::getline(std::cin, input))
+            char *line = readline("> ");
+            if (!line)
                 return 0;
+
+            str input = line;
+            std::free(line);
+
             if (input.empty())
                 continue;
+            add_history(input.c_str());
+
             if (input[0] == ':')
             {
                 if (input[1] == 'q')
@@ -27,7 +51,7 @@ int main(int argc, char *argv[])
                 else if (input[1] == 'v')
                 {
                     for (const auto &[varName, varValue] : currentContext.variables)
-                        std::cout << varName << " = " << varValue << std::endl;
+                        std::println("{} = {}", varName, varValue);
 
                     continue;
                 }
@@ -35,16 +59,21 @@ int main(int argc, char *argv[])
                 {
                     for (const auto &[funcName, funcObjs] : currentContext.functions)
                     {
-                        std::cout << funcName << "( ";
+                        std::print("{}( ", funcName);
                         for (const auto &arg : funcObjs.args)
-                            std::cout << arg << " ";
-                        std::cout << ") =" << funcObjs.expression << std::endl;
+                            std::print("{} ", arg);
+                        std::println(") ={}", funcObjs.expression);
                     }
+                    continue;
+                }
+                else if (input[1] == 'c')
+                {
+                    std::print("\033[2J\033[H");
                     continue;
                 }
                 else
                 {
-                    std::cerr << "unrecognized command" << std::endl;
+                    std::println(stderr, "unrecognized command");
                     continue;
                 }
             }
@@ -55,11 +84,11 @@ int main(int argc, char *argv[])
                 u32 histIndex = currentContext.history.size() - histTemp;
                 if (histIndex < currentContext.history.size())
                 {
-                    std::cout << currentContext.history[histIndex].first << " = "
-                              << currentContext.history[histIndex].second << std::endl;
+                    std::println("{} = {}", currentContext.history[histIndex].first,
+                                 currentContext.history[histIndex].second);
                 }
                 else
-                    std::cerr << "invalid history index" << std::endl;
+                    std::println(stderr, "invalid history index");
                 continue;
             }
             run(input);
